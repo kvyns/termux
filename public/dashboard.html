@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Server Health Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      background: #0b0e14;
+      color: #eaeaea;
+      font-family: Inter, system-ui, sans-serif;
+    }
+
+    .header {
+      padding: 14px 20px;
+      font-size: 20px;
+      font-weight: 600;
+      border-bottom: 1px solid #1a1f2b;
+      background: linear-gradient(#0f131c, #0b0e14);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      height: calc(100vh - 54px);
+    }
+
+    /* -------- LEFT PANEL -------- */
+    .sidebar {
+      padding: 16px;
+      border-right: 1px solid #1a1f2b;
+      background: #0f131c;
+    }
+
+    .card {
+      background: #151a26;
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .card h4 {
+      margin: 0;
+      font-size: 12px;
+      color: #8b93a7;
+      text-transform: uppercase;
+    }
+
+    .value {
+      font-size: 34px;
+      font-weight: 700;
+      margin-top: 6px;
+    }
+
+    /* -------- RIGHT PANEL -------- */
+    .content {
+      padding: 16px;
+      overflow: auto;
+    }
+
+    .charts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .chart-panel {
+      background: #151a26;
+      border-radius: 8px;
+      padding: 10px;
+      height: 280px;   /* 🔥 FIX */
+    }
+
+    .chart-panel canvas {
+      width: 100% !important;
+      height: 100% !important;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="header">Server Health Dashboard</div>
+
+<div class="layout">
+  <!-- LEFT -->
+  <div class="sidebar">
+    <div class="card">
+      <h4>Status</h4>
+      <div class="value" id="status">UP</div>
+    </div>
+
+    <div class="card">
+      <h4>Total API Hits</h4>
+      <div class="value" id="hits">0</div>
+    </div>
+
+    <div class="card">
+      <h4>CPU Usage</h4>
+      <div class="value" id="cpu">0%</div>
+    </div>
+
+    <div class="card">
+      <h4>Memory</h4>
+      <div class="value" id="mem">0 MB</div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="content">
+    <div class="charts">
+      <div class="chart-panel"><canvas id="hitsChart"></canvas></div>
+      <div class="chart-panel"><canvas id="cpuChart"></canvas></div>
+      <div class="chart-panel"><canvas id="memChart"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ws = new WebSocket(
+  (location.protocol === "https:" ? "wss://" : "ws://") + location.host
+);
+
+const MAX_POINTS = Infinity;
+const labels = [];
+const hitsData = [];
+const cpuData = [];
+const memData = [];
+
+function makeChart(id, label, data) {
+  return new Chart(document.getElementById(id), {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label,
+        data,
+        borderWidth: 2,
+        tension: 0.3,
+        pointRadius: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,   // 🔥 CRITICAL
+      animation: false,
+      scales: {
+        x: { ticks: { color: "#8b93a7" }, grid: { color: "#1f2430" } },
+        y: { ticks: { color: "#8b93a7" }, grid: { color: "#1f2430" } }
+      },
+      plugins: {
+        legend: { labels: { color: "#eaeaea" } }
+      }
+    }
+  });
+}
+
+const hitsChart = makeChart("hitsChart", "API Hits", hitsData);
+const cpuChart  = makeChart("cpuChart", "CPU %", cpuData);
+const memChart  = makeChart("memChart", "Memory MB", memData);
+
+function pushData(d) {
+  if (labels.length > MAX_POINTS) {
+    labels.shift();
+    hitsData.shift();
+    cpuData.shift();
+    memData.shift();
+  }
+
+  labels.push(new Date(d.t).toLocaleTimeString());
+  hitsData.push(d.hits);
+  cpuData.push(d.cpu);
+  memData.push(d.mem);
+
+  document.getElementById("hits").innerText = d.hits;
+  document.getElementById("cpu").innerText = d.cpu + "%";
+  document.getElementById("mem").innerText = d.mem + " MB";
+}
+
+ws.onmessage = e => {
+  const msg = JSON.parse(e.data);
+  if (msg.type === "history") msg.data.forEach(pushData);
+  if (msg.type === "live") pushData(msg.data);
+
+  hitsChart.update();
+  cpuChart.update();
+  memChart.update();
+};
+</script>
+
+</body>
+</html>
