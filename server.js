@@ -5,6 +5,7 @@ const WebSocket = require("ws");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const child_process = require("child_process");
 
 const app = express();
 const server = http.createServer(app);
@@ -48,12 +49,59 @@ function cpuPercent() {
 
 function getDeviceInfo() {
   const cpus = os.cpus() || [];
+  // try to discover CPU info from /proc/cpuinfo when os.cpus() is empty (common on Android/Termux)
+  let cpuModel;
+  let cpuCount = cpus.length;
+
+  if (!cpuModel && cpus[0]) {
+    cpuModel = cpus[0].model;
+  }
+
+  if ((!cpuModel || cpuCount === 0) && fs.existsSync('/proc/cpuinfo')) {
+    try {
+      const info = fs.readFileSync('/proc/cpuinfo', 'utf8');
+      const lines = info.split('\n');
+      for (const line of lines) {
+        const parts = line.split(':');
+        if (parts.length < 2) continue;
+        const key = parts[0].trim().toLowerCase();
+        const val = parts.slice(1).join(':').trim();
+        if (!cpuModel && (key === 'model name' || key === 'processor' || key === 'hardware' || key === 'cpu part' || key === 'model')) {
+          cpuModel = val;
+        }
+      }
+      const matches = info.match(/^processor\s*:/gm);
+      if (matches) cpuCount = matches.length;
+    } catch (err) {
+      // ignore and fallback
+    }
+  }
+
+  // try to get Android model name via getprop when available
+  let modelName;
+  try {
+    const out = child_process.execSync('getprop ro.product.model', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    if (out) modelName = out;
+  } catch (e) {
+    // getprop may not exist on non-Android systems
+  }
+
+  if (!modelName) {
+    try {
+      const out = child_process.execSync('getprop ro.product.device', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+      if (out) modelName = out;
+    } catch (e) {}
+  }
+
+  const hostname = process.env.DEVICE_NAME || modelName || os.hostname();
+
   return {
-    hostname: os.hostname(),
+    hostname,
     platform: os.platform(),
     arch: os.arch(),
-    cpuModel: cpus[0] ? cpus[0].model : undefined,
-    cpuCount: cpus.length,
+    model: modelName,
+    cpuModel: cpuModel || undefined,
+    cpuCount: cpuCount || undefined,
     uptime: Math.floor(os.uptime()),
     totalMemoryMB: Math.round(os.totalmem() / 1024 / 1024)
   };
