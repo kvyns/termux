@@ -1,192 +1,253 @@
+<!-- public/dashboard.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Server Health Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
-  <style>
-    body {
-      margin: 0;
-      background: #0b0e14;
-      color: #eaeaea;
-      font-family: Inter, system-ui, sans-serif;
-    }
+<title>Server Health Dashboard</title>
 
-    .header {
-      padding: 14px 20px;
-      font-size: 20px;
-      font-weight: 600;
-      border-bottom: 1px solid #1a1f2b;
-      background: linear-gradient(#0f131c, #0b0e14);
-    }
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    .layout {
-      display: grid;
-      grid-template-columns: 280px 1fr;
-      height: calc(100vh - 54px);
-    }
+<style>
 
-    /* -------- LEFT PANEL -------- */
-    .sidebar {
-      padding: 16px;
-      border-right: 1px solid #1a1f2b;
-      background: #0f131c;
-    }
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:Arial, Helvetica, sans-serif;
+}
 
-    .card {
-      background: #151a26;
-      border-radius: 8px;
-      padding: 14px;
-      margin-bottom: 12px;
-    }
+body{
+  background:#020617;
+  color:white;
+  padding:30px;
+}
 
-    .card h4 {
-      margin: 0;
-      font-size: 12px;
-      color: #8b93a7;
-      text-transform: uppercase;
-    }
+.top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:30px;
+}
 
-    .value {
-      font-size: 34px;
-      font-weight: 700;
-      margin-top: 6px;
-    }
+h1{
+  font-size:40px;
+}
 
-    /* -------- RIGHT PANEL -------- */
-    .content {
-      padding: 16px;
-      overflow: auto;
-    }
+a{
+  color:white;
+  text-decoration:none;
+  background:#0ea5e9;
+  padding:12px 22px;
+  border-radius:10px;
+  font-weight:bold;
+}
 
-    .charts {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
+.grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:25px;
+}
 
-    .chart-panel {
-      background: #151a26;
-      border-radius: 8px;
-      padding: 10px;
-      height: 280px;   /* 🔥 FIX */
-    }
+.card{
+  background:#0f172a;
+  padding:25px;
+  border-radius:20px;
+  border:1px solid rgba(255,255,255,0.05);
+}
 
-    .chart-panel canvas {
-      width: 100% !important;
-      height: 100% !important;
-    }
-  </style>
+.card h2{
+  margin-bottom:20px;
+  color:#38bdf8;
+}
+
+canvas{
+  background:white;
+  border-radius:10px;
+  padding:10px;
+}
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:20px;
+  margin-bottom:25px;
+}
+
+.stat{
+  background:#111827;
+  padding:20px;
+  border-radius:18px;
+  text-align:center;
+}
+
+.stat h3{
+  color:#38bdf8;
+  margin-bottom:10px;
+}
+
+.value{
+  font-size:32px;
+  font-weight:bold;
+}
+
+</style>
 </head>
 
 <body>
 
-<div class="header">Server Health Dashboard</div>
+<div class="top">
+  <h1>📊 Server Health Dashboard</h1>
 
-<div class="layout">
-  <!-- LEFT -->
-  <div class="sidebar">
-    <div class="card">
-      <h4>Status</h4>
-      <div class="value" id="status">UP</div>
-    </div>
+  <a href="/">⬅ Home</a>
+</div>
 
-    <div class="card">
-      <h4>Total API Hits</h4>
-      <div class="value" id="hits">0</div>
-    </div>
+<div class="stats">
 
-    <div class="card">
-      <h4>CPU Usage</h4>
-      <div class="value" id="cpu">0%</div>
-    </div>
-
-    <div class="card">
-      <h4>Memory</h4>
-      <div class="value" id="mem">0 MB</div>
-    </div>
+  <div class="stat">
+    <h3>API Hits</h3>
+    <div class="value" id="apiVal">0</div>
   </div>
 
-  <!-- RIGHT -->
-  <div class="content">
-    <div class="charts">
-      <div class="chart-panel"><canvas id="hitsChart"></canvas></div>
-      <div class="chart-panel"><canvas id="cpuChart"></canvas></div>
-      <div class="chart-panel"><canvas id="memChart"></canvas></div>
-    </div>
+  <div class="stat">
+    <h3>CPU Usage</h3>
+    <div class="value" id="cpuVal">0%</div>
   </div>
+
+  <div class="stat">
+    <h3>Memory</h3>
+    <div class="value" id="memVal">0 MB</div>
+  </div>
+
+</div>
+
+<div class="grid">
+
+  <div class="card">
+    <h2>API Requests</h2>
+    <canvas id="apiChart"></canvas>
+  </div>
+
+  <div class="card">
+    <h2>CPU Usage</h2>
+    <canvas id="cpuChart"></canvas>
+  </div>
+
+  <div class="card">
+    <h2>Memory Usage</h2>
+    <canvas id="memChart"></canvas>
+  </div>
+
 </div>
 
 <script>
+
 const ws = new WebSocket(
-  (location.protocol === "https:" ? "wss://" : "ws://") + location.host
+  (location.protocol === "https:" ? "wss://" : "ws://")
+  + location.host
 );
 
-const MAX_POINTS = Infinity;
 const labels = [];
-const hitsData = [];
+const apiData = [];
 const cpuData = [];
 const memData = [];
 
-function makeChart(id, label, data) {
-  return new Chart(document.getElementById(id), {
-    type: "line",
-    data: {
-      labels,
-      datasets: [{
-        label,
-        data,
-        borderWidth: 2,
-        tension: 0.3,
-        pointRadius: 0
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,   // 🔥 CRITICAL
-      animation: false,
-      scales: {
-        x: { ticks: { color: "#8b93a7" }, grid: { color: "#1f2430" } },
-        y: { ticks: { color: "#8b93a7" }, grid: { color: "#1f2430" } }
+function createChart(id, label, data, color) {
+
+  return new Chart(
+    document.getElementById(id),
+    {
+      type:"line",
+
+      data:{
+        labels,
+
+        datasets:[
+          {
+            label,
+            data,
+            borderColor:color,
+            tension:0.3,
+            borderWidth:3,
+            fill:false
+          }
+        ]
       },
-      plugins: {
-        legend: { labels: { color: "#eaeaea" } }
+
+      options:{
+        responsive:true,
+        animation:false
       }
     }
-  });
+  );
 }
 
-const hitsChart = makeChart("hitsChart", "API Hits", hitsData);
-const cpuChart  = makeChart("cpuChart", "CPU %", cpuData);
-const memChart  = makeChart("memChart", "Memory MB", memData);
+const apiChart = createChart(
+  "apiChart",
+  "API Hits",
+  apiData,
+  "#38bdf8"
+);
 
-function pushData(d) {
-  if (labels.length > MAX_POINTS) {
+const cpuChart = createChart(
+  "cpuChart",
+  "CPU %",
+  cpuData,
+  "#22c55e"
+);
+
+const memChart = createChart(
+  "memChart",
+  "Memory MB",
+  memData,
+  "#f97316"
+);
+
+function pushData(d){
+
+  if(labels.length > 60){
     labels.shift();
-    hitsData.shift();
+    apiData.shift();
     cpuData.shift();
     memData.shift();
   }
 
-  labels.push(new Date(d.t).toLocaleTimeString());
-  hitsData.push(d.hits);
-  cpuData.push(d.cpu);
-  memData.push(d.mem);
+  labels.push(
+    new Date(d.time).toLocaleTimeString()
+  );
 
-  document.getElementById("hits").innerText = d.hits;
-  document.getElementById("cpu").innerText = d.cpu + "%";
-  document.getElementById("mem").innerText = d.mem + " MB";
+  apiData.push(d.apiHits);
+  cpuData.push(d.cpu);
+  memData.push(d.memory);
+
+  document.getElementById("apiVal").innerText =
+    d.apiHits;
+
+  document.getElementById("cpuVal").innerText =
+    d.cpu + "%";
+
+  document.getElementById("memVal").innerText =
+    d.memory + " MB";
 }
 
-ws.onmessage = e => {
-  const msg = JSON.parse(e.data);
-  if (msg.type === "history") msg.data.forEach(pushData);
-  if (msg.type === "live") pushData(msg.data);
+ws.onmessage = (e) => {
 
-  hitsChart.update();
+  const msg = JSON.parse(e.data);
+
+  if(msg.type === "history"){
+    msg.data.forEach(pushData);
+  }
+
+  if(msg.type === "live"){
+    pushData(msg.data);
+  }
+
+  apiChart.update();
   cpuChart.update();
   memChart.update();
 };
+
 </script>
 
 </body>
