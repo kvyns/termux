@@ -35,6 +35,11 @@ h1{
   font-size:40px;
 }
 
+.icon{width:20px;height:20px;vertical-align:middle;fill:#38bdf8;margin-right:8px}
+
+.device-line{margin:6px 0}
+.device-name{font-weight:700}
+
 a{
   color:white;
   text-decoration:none;
@@ -98,9 +103,17 @@ canvas{
 <body>
 
 <div class="top">
-  <h1>📊 Server Health Dashboard</h1>
+  <h1>
+    <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M3 3v18h18" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="7" y="12" width="2" height="6" />
+      <rect x="11" y="8" width="2" height="10" />
+      <rect x="15" y="4" width="2" height="14" />
+    </svg>
+    Server Health Dashboard
+  </h1>
 
-  <a href="/">⬅ Home</a>
+  <a href="/">Home</a>
 </div>
 
 <div class="stats">
@@ -118,6 +131,11 @@ canvas{
   <div class="stat">
     <h3>Memory</h3>
     <div class="value" id="memVal">0 MB</div>
+  </div>
+
+  <div class="stat" id="deviceStat">
+    <h3>Device</h3>
+    <div class="value" id="deviceInfo">—</div>
   </div>
 
 </div>
@@ -243,10 +261,44 @@ ws.onmessage = (e) => {
     pushData(msg.data);
   }
 
+  // device info can be sent as msg.device or inside msg.data.device
+  const device = msg.device || (msg.data && msg.data.device) || (msg.data && msg.data.system);
+  if(device){
+    updateDevice(device);
+  }
+
   apiChart.update();
   cpuChart.update();
   memChart.update();
 };
+
+function formatUptime(s){
+  if(!s && s !== 0) return '—';
+  const sec = Math.floor(s);
+  const h = Math.floor(sec/3600);
+  const m = Math.floor((sec%3600)/60);
+  const ss = sec%60;
+  return `${h}h ${m}m ${ss}s`;
+}
+
+function updateDevice(info){
+  const el = document.getElementById('deviceInfo');
+  const hostname = info.hostname || info.name || info.deviceName || '—';
+  const platform = info.platform || info.os || '—';
+  const arch = info.arch || info.architecture || '—';
+  const cpuModel = info.cpuModel || info.cpu || (info.cpus && info.cpus[0] && info.cpus[0].model) || '—';
+  const cpuCount = info.cpus ? (info.cpus.length) : (info.cpuCount || '—');
+  const uptime = formatUptime(info.uptime || info.systemUptime || info.uptimeSeconds);
+
+  el.innerHTML = `
+    <div class="device-line"><span class="device-name">Name:</span> ${hostname}</div>
+    <div class="device-line"><span class="device-name">Platform:</span> ${platform}</div>
+    <div class="device-line"><span class="device-name">Arch:</span> ${arch}</div>
+    <div class="device-line"><span class="device-name">Processor:</span> ${cpuModel}</div>
+    <div class="device-line"><span class="device-name">CPUs:</span> ${cpuCount}</div>
+    <div class="device-line"><span class="device-name">Uptime:</span> ${uptime}</div>
+  `;
+}
 
 </script>
 

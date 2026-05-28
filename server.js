@@ -4,6 +4,7 @@ const http = require("http");
 const WebSocket = require("ws");
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 
 const app = express();
 const server = http.createServer(app);
@@ -45,6 +46,19 @@ function cpuPercent() {
   return Math.max(0, Math.round((diff / time) * 100));
 }
 
+function getDeviceInfo() {
+  const cpus = os.cpus() || [];
+  return {
+    hostname: os.hostname(),
+    platform: os.platform(),
+    arch: os.arch(),
+    cpuModel: cpus[0] ? cpus[0].model : undefined,
+    cpuCount: cpus.length,
+    uptime: Math.floor(os.uptime()),
+    totalMemoryMB: Math.round(os.totalmem() / 1024 / 1024)
+  };
+}
+
 app.use((req, res, next) => {
   apiHits++;
   next();
@@ -75,6 +89,14 @@ wss.on("connection", (ws) => {
     })
   );
 
+  // send current device info once on connect
+  ws.send(
+    JSON.stringify({
+      type: "device",
+      device: getDeviceInfo()
+    })
+  );
+
   const interval = setInterval(() => {
     const sample = {
       time: Date.now(),
@@ -84,6 +106,9 @@ wss.on("connection", (ws) => {
         process.memoryUsage().rss / 1024 / 1024
       )
     };
+
+      // attach device/system snapshot to each live sample
+      sample.device = getDeviceInfo();
 
     history.push(sample);
 

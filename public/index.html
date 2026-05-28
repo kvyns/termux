@@ -94,6 +94,17 @@
     .mini h3{
       margin-bottom:10px;
       color:#38bdf8;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-size:18px;
+    }
+
+    .icon{
+      width:20px;
+      height:20px;
+      flex:0 0 20px;
+      fill:#38bdf8;
     }
   </style>
 </head>
@@ -121,17 +132,35 @@
   <div class="card">
 
     <div class="mini">
-      <h3>⚡ Backend</h3>
+      <h3>
+        <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4H3V6zM3 12h18v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6z" />
+        </svg>
+        Backend
+      </h3>
       <p>Node.js + Express + WebSockets</p>
     </div>
 
     <div class="mini">
-      <h3>📊 Monitoring</h3>
+      <h3>
+        <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M3 3v18h18" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="7" y="12" width="2" height="6" />
+          <rect x="11" y="8" width="2" height="10" />
+          <rect x="15" y="4" width="2" height="14" />
+        </svg>
+        Monitoring
+      </h3>
       <p>Live CPU, Memory & API Analytics</p>
     </div>
 
     <div class="mini">
-      <h3>🚀 Hosted</h3>
+      <h3>
+        <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M20.39 8.56a5 5 0 0 0-7.07 0L11 10.88V13h2.12l2.32-2.32a3 3 0 1 1 4.24 4.24L18 17.88V20h2.12l1.27-1.27a5 5 0 0 0-.99-10.17z" />
+        </svg>
+        Hosted
+      </h3>
       <p>Running directly from my personal setup</p>
     </div>
 
